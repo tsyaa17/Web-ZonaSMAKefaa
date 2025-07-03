@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Persebaran Sekolah Menengah Atas dan Kejuruan Kabupaten TTU</title>
+<!-- Leaflet CSS -->
+<link href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" rel="stylesheet" crossorigin="" />
+<style>
+  /* Reset */
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  html, body {
+    height: 100%;
+    font-family: 'Poppins', sans-serif;
+    color: #222;
+    background-color: #f2f7fb;
+    overflow-x: hidden;
+  }
+  a {
+    text-decoration: none;
+    color: inherit;
+  }
+  #app {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    animation: fadeInUp 1s ease forwards;
+  }
+  /* Animasi transisi masuk halaman */
+  @keyframes fadeInUp {
+    0% {
+      opacity: 0;
+      transform: translateY(40px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  /* Header Menu */
+  header {
+    position: sticky;
+    top: 0;
+    background: linear-gradient(90deg,#0d47a1,#1976d2);
+    color: white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+    z-index: 1000;
+    padding: 12px 0;
+  }
+  .nav-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+    display: flex;
+    justify-content: center;
+  }
+  nav {
+    display: flex;
+    gap: 28px;
+  }
+  nav button {
+    background: transparent;
+    border: none;
+    color: white;
+    font-weight: 600;
+    font-size: 1.1rem;
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+  }
+  nav button:hover, nav button:focus {
+    background: rgba(255 255 255 / 0.3);
+    outline: none;
+    transform: scale(1.1);
+  }
+  main {
+    flex-grow: 1;
+    max-width: 1200px;
+    margin: 32px auto 64px;
+    padding: 0 24px;
+  }
+  section {
+    display: none;
+    padding: 2rem;
+    border-radius: 16px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.12);
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center center;
+    min-height: 60vh;
+    color: white;
+  }
+  section.active {
+    display: block;
+    animation: fadeInUp 0.6s ease both;
+  }
+  h1, h2 {
+    text-align: center;
+    margin-bottom: 32px;
+    font-weight: 800;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.7);
+  }
+  /* Beranda with real school building photo */
+  #home-section {
+    background-image: url('1.jpg');
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+  #home-section h1 {
+    font-size: 3rem;
+    margin-bottom: 24px;
+  }
+  #btn-open-map {
+    font-weight: 700;
+    font-size: 1.3rem;
+    background: linear-gradient(135deg, #0066ff, #00c6ff);
+    border: none;
+    padding: 16px 48px;
+    border-radius: 14px;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(0,198,255,0.6);
+    color: white;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  #btn-open-map:hover {
+    transform: scale(1.08);
+    box-shadow: 0 14px 32px rgba(0,198,255,0.85);
+  }
+  /* Peta Section real school campus background */
+  #map-section {
+    background-image: url('https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/66806423-221c-4bbe-ac84-a3e2bea8baad.png');
+    color: black;
+    min-height: 620px;
+    padding: 1rem;
+  }
+  #map {
+    height: 560px;
+    border-radius: 16px;
+  }
+  /* Info Sekolah with real school classroom background */
+  #info-section {
+    background-image: url('6.jpeg');
+  }
+  .school-grid {
+    display: grid;
+    gap: 20px;
+    grid-template-columns: repeat(auto-fit,minmax(280px,1fr));
+  }
+  .school-card {
+    background: rgba(255 255 255 / 0.9);
+    border-radius: 16px;
+    box-shadow: 0 6px 25px rgba(0,0,0,0.18);
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    color: #222;
+    transition: transform 0.3s ease;
+  }
+  .school-card:hover {
+    transform: translateY(-6px);
+  }
+  .school-image {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    border-radius: 16px 16px 0 0;
+  }
+  .school-content {
+    padding: 16px 24px;
+  }
+  .school-content h3 {
+    color: #0d47a1;
+    margin-bottom: 8px;
+  }
+  .school-content p {
+    font-size: 0.9rem;
+    color: #444;
+  }
+  /* Modal style */
+  .modal {
+    display:none;
+    position: fixed;
+    z-index: 2000;
+    top:0; left:0;
+    width: 100vw; height: 100vh;
+    background: rgba(0,0,0,0.85);
+    justify-content: center;
+    align-items: center;
+  }
+  .modal.active {
+    display: flex;
+  }
+  .modal-content {
+    background: white;
+    color: #222;
+    max-width: 720px;
+    border-radius: 20px;
+    padding: 24px;
+    position: relative;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+    max-height: 92vh;
+    overflow-y: auto;
+  }
+  .modal-content img {
+    width: 100%;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    object-fit: cover;
+    max-height: 350px;
+  }
+  .modal-content h3 {
+    margin-bottom: 14px;
+    color: #0d47a1;
+  }
+  .modal-content p {
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+  .modal-close {
+    position: absolute;
+    right: 14px;
+    top: 10px;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    font-size: 30px;
+    font-weight: 700;
+    color: #1976d2;
+    transition: color 0.3s ease;
+  }
+  .modal-close:hover {
+    color: #0d47a1;
+  }
+  /* Team Section with real staff photo background */
+  #team-section {
+    background-image: url('4.jpg');
+    color: white;
+  }
+  .team-grid {
+    display: grid;
+    gap: 28px;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: auto auto;
+  }
+  .team-card {
+    background: rgba(255 255 255 / 0.9);
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.15);
+    text-align: center;
+    color: #222;
+    transition: transform 0.3s ease;
+  }
+  .team-card:hover {
+    transform: translateY(-8px);
+  }
+  .team-photo {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 14px;
+    border: 4px solid #1976d2;
+  }
+  .team-name {
+    font-weight: 700;
+    font-size: 1.3rem;
+    margin-bottom: 6px;
+  }
+  .team-role {
+    font-size: 1rem;
+    color: #555;
+  }
+  /* Contact Section with real school campus background */
+  #contact-section {
+    max-width: 600px;
+    margin: 0 auto;
+    background-image: url('u.jpeg');
+    color: white;
+    border-radius: 20px;
+    padding: 30px 30px 40px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.6);
+  }
+  #contact-section h2 {
+    color: #000000;
+    margin-bottom: 24px;
+  }
+  form label {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: #000000;
+  }
+  form input, form textarea {
+    width: 100%;
+    padding: 14px 12px;
+    margin-bottom: 20px;
+    border-radius: 12px;
+    border: 2px solid #000000;
+    font-size: 1rem;
+    background: rgba(0, 0, 0, 0.2);
+    color: #fff;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+  form input::placeholder, form textarea::placeholder {
+    color: #000000;
+  }
+  form input:focus, form textarea:focus {
+    outline: none;
+    border-color: #000000;
+    box-shadow: 0 0 10px #000000bb;
+    animation: zoomout 0.3s ease forwards;
+    background: rgba(0, 0, 0, 0.3);
+    color: #222;
+  }
+  form textarea {
+    resize: vertical;
+    min-height: 120px;
+  }
+  form button {
+    background: linear-gradient(135deg,#000000,#000000);
+    border: none;
+    color: white;
+    font-weight: 700;
+    font-size: 1.15rem;
+    padding: 15px 0;
+    border-radius: 14px;
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.4s ease, box-shadow 0.4s ease;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.75);
+  }
+  form button:hover {
+    background: linear-gradient(135deg,#000000,#000000);
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.9);
+  }
+  #form-message {
+    margin-top: 18px;
+    font-weight: 700;
+    font-size: 1rem;
+    text-align: center;
+  }
+  /* Responsive */
+  @media (max-width: 900px) {
+    .team-grid {
+      grid-template-columns: repeat(2, 1fr);
+      grid-template-rows: auto auto auto;
+      gap: 24px 30px;
+    }
+  }
+  @media (max-width: 600px) {
+    .team-grid {
+      grid-template-columns: 1fr;
+      grid-template-rows: unset;
+      gap: 20px 0;
+    }
+    nav {
+      gap: 14px;
+    }
+    nav button {
+      font-size: 1rem;
+      padding: 6px 10px;
+    }
+    #home-section h1 {
+      font-size: 2rem;
+    }
+    main {
+      margin: 20px 16px 40px;
+      padding: 0 12px;
+    }
+    #map {
+      height: 400px;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="app" role="main">
+<header>
+  <div class="nav-container">
+    <nav aria-label="Menu Navigasi Utama">
+      <button id="nav-home" aria-controls="home-section" aria-selected="true" tabindex="0">Beranda</button>
+      <button id="nav-map" aria-controls="map-section" tabindex="0">Peta</button>
+      <button id="nav-info" aria-controls="info-section" tabindex="0">Informasi</button>
+      <button id="nav-team" aria-controls="team-section" tabindex="0">Tim</button>
+      <button id="nav-contact" aria-controls="contact-section" tabindex="0">Kontak</button>
+    </nav>
+  </div>
+</header>
+<main>
+  <section id="home-section" class="active" tabindex="0" aria-labelledby="home-title" aria-describedby="home-desc" role="region">
+    <h1 id="home-title">Selamat Datang di WebGIS Persebaran Sekolah Kabupaten TTU</h1>
+    <p id="home-desc" style="text-align:center; max-width:400px; margin: 0 auto 2rem; font-size:1.1rem; text-shadow:none; color:#eee;">
+      Temukan lokasi dan informasi lengkap Sekolah Menengah Atas dan Kejuruan di Kabupaten Timor Tengah Utara melalui peta interaktif kami.
+    </p>
+    <button id="btn-open-map" aria-label="Buka peta persebaran sekolah">Lihat Peta Persebaran Sekolah</button>
+  </section>
+  <section id="map-section" aria-labelledby="map-title" tabindex="0" role="region" style="background:none; padding:0;">
+    <h2 id="map-title" style="padding: 2rem 0 1rem 24px; max-width: 1200px; margin: 0 auto; color:#0d47a1;">Peta Persebaran Sekolah Menengah Atas dan Kejuruan</h2>
+    <div id="map" role="application" aria-label="Peta persebaran sekolah TTU"></div>
+  </section>
+  <section id="info-section" aria-labelledby="info-title" tabindex="0" role="region">
+    <h2 id="info-title">Informasi Sekolah</h2>
+    <div class="school-grid" id="school-grid"></div>
+  </section>
+  <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-desc">
+    <div class="modal-content">
+      <button class="modal-close" id="modal-close" aria-label="Tutup informasi detail sekolah">&times;</button>
+      <img id="modal-img" src="" alt="" />
+      <h3 id="modal-title"></h3>
+      <p id="modal-desc"></p>
+    </div>
+  </div>
+  <section id="team-section" aria-labelledby="team-title" tabindex="0" role="region">
+    <h2 id="team-title">Tim Pengembang</h2>
+    <div class="team-grid" id="team-grid"></div>
+  </section>
+  <section id="contact-section" aria-labelledby="contact-title" tabindex="0" role="region">
+    <h2 id="contact-title">Kontak & Ulasan</h2>
+    <form id="contact-form" aria-label="Formulir untuk mengirim ulasan dan email">
+      <label for="nama">Nama:</label>
+      <input type="text" id="nama" name="nama" required placeholder="Nama lengkap Anda" />
+      <label for="email">Email:</label>
+      <input type="email" id="email" name="email" required placeholder="Alamat email Anda" />
+      <label for="ulasan">Ulasan:</label>
+      <textarea id="ulasan" name="ulasan" placeholder="Tulis ulasan Anda di sini..." required></textarea>
+      <button type="submit" aria-label="Kirim ulasan dan email">Kirim Ulasan</button>
+    </form>
+    <div id="form-message" role="alert" aria-live="assertive"></div>
+  </section>
+</main>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js" crossorigin=""></script>
+<script>
+  const sections = {
+    home: document.getElementById('home-section'),
+    map: document.getElementById('map-section'),
+    info: document.getElementById('info-section'),
+    team: document.getElementById('team-section'),
+    contact: document.getElementById('contact-section'),
+  };
+  const navButtons = document.querySelectorAll('nav button');
+  function setActiveSection(key) {
+    Object.entries(sections).forEach(([k, section]) => {
+      if(k === key){
+        section.classList.add('active');
+        navButtons.forEach(btn => {
+          btn.setAttribute('aria-selected', btn.id.endsWith(k) ? 'true' : 'false');
+        });
+        section.focus();
+      } else {
+        section.classList.remove('active');
+      }
+    });
+    if(key === 'map'){
+      setTimeout(() => map.invalidateSize(), 200);
+    }
+  }
+  navButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.id.replace('nav-', '');
+      setActiveSection(key);
+    });
+  });
+  document.getElementById('btn-open-map').addEventListener('click', () => {
+    setActiveSection('map');
+  });
+  let map = L.map('map').setView([-9.46916950665654, 124.49727791769388], 11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 18,
+    attribution: '© OpenStreetMap contributors',
+  }).addTo(map);
+ const sekolahData = [
+    {"nama":"SMA Negeri 1 Kefamenanu","lat":-9.456378,"lng":124.483008,"alamat":"Jl. SONBAY, Kefamenanu Selatan, Kec. Kota Kefamenanu, Kab. Timor Tengah Utara Prov. Nusa Tenggara Timur","jenis":"SMAN","deskripsi":"(50301006), Akreditasi: A, 822 Siswa, Ruang Kelas, Laboratorium, Perpustakaan dll","foto":"SMAN1.jpeg"},
+    {"nama":"SMA Negeri 2 Kefamenanu","lat":-9.487502515431688,"lng":124.4981431099785,"alamat":"Jl. Sasi, Maubeli, Kec. Kota Kefamenanu, Kab. Timor Tengah Utara Prov. Nusa Tenggara Timur","jenis":"SMAN","deskripsi":"(50301005) Akreditasi: A, 830 Siswa, Ruang Kelas, Laboratorium, Perpustakaan, Ruang Praktek dll","foto":"SMA2.jpeg"},
+    {"nama":"SMA Negeri 3 Kefamenanu","lat":-9.443096164783508,"lng":124.46564832215017,"alamat":"Jl. Vetor SnoE Lake, Bansone, Kec. Kota Kefamenanu, Kabupaten Timor Tengah Utara, Nusa Tenggara Timur","jenis":"SMAN","deskripsi":"(69849076) Akreditasi: B, 153 Siswa, Ruang Kelas, Laboratorium, Perpustakaan dll","foto":"SMAN3Kefa.jpg"},
+    {"nama":"SMK Negeri 1 Kefamenanu","lat":-9.514800341384586,"lng":124.4946227954179,"alamat":"Jl. EL TARI KM. 09, Sasi, Kec. Kota Kefamenanu, Kab. Timor Tengah Utara Prov. Nusa Tenggara Timur","jenis":"SMKN","deskripsi":"(50301011) Akreditasi: A, 1275 Siswa, Ruang Kelas, Laboratorium, Perpustakaan, Ruang Praktik dll","foto":"SMK1Kefa.jpeg"},
+    {"nama":"SMA Dharma Ayu Kefamenanu","lat":-9.46543122907507,"lng":124.5120944596286,"alamat":"Jl. Raya Papin Indah, Km.5, Tubuhue, Kec. Kota Kefamenanu, Kab. Timor Tengah Utara Prov. Nusa Tenggara Timur","jenis":"SMA","deskripsi":"(69760655) Akreditasi: C, 101 Siswa, Ruang Kelas, Laboratorium, Perpustakaan dll","foto":"SMADHARMA.jpeg"},
+    {"nama":"SMAK Fides Kefamenanu","lat":-9.503538279505074,"lng":124.49537053295919,"alamat":"Jl. El Tari, Km.7, Sasi, Kec. Kota Kefamenanu, Kab. Timor Tengah Utara Prov. Nusa Tenggara Timur","jenis":"SMAK","deskripsi":"(50307412) Akreditasi: A, 142 Siswa, Ruang Kelas, Laboratorium, Perpustakaan dll","foto":"SMAKFides.jpeg"},
+    {"nama":"SMA Kristen Petra Kefamenanu","lat":-9.470812866197925,"lng":124.4827299774764,"alamat":"Jl. Mayjend, El Tari, Kefamenanu Selatan, Kec. Kota Kefamenanu, Kab. Timor Tengah Utara Prov. Nusa Tenggara Timur","jenis":"SMA","deskripsi":"(69969250) Akreditasi: C, 214 Siswa, Ruang Kelas, Laboratorium, Perpustakaan","foto":"SMAKristenPed.jpeg"},
+    {"nama":"SMASK Wartabakti Kefamenanu","lat":-9.459227882595227,"lng":124.48254032592145,"alamat":"Jl. Achmad Yani, Kefamenanu Selatan, Kec. Kota Kefamenanu, Kab. Timor Tengah Utara, Prov. Nusa Tenggara Timur","jenis":"SMAS","deskripsi":"(50301009) Akreditasi: A, 542 Siswa, Ruang Kelas, Laboratorium, Perpustakaan","foto":"SMASKWARTAI.jpeg"},
+    {"nama":"SMAS Pelita Karya Kefamenanu","lat":-9.456373480840334,"lng":124.47805380776799,"alamat":"Jl. Mayjend, El Tari, Benpasi, Kec. Kota Kefamenanu, Kab. Timor Tengah Utara, Prov. Nusa Tenggara Timur","jenis":"SMAS","deskripsi":"(50301008) Akreditasi: B, 244 Siswa, Ruang Kelas, Laboratorium, Perpustakaan","foto":"SMASPELITAKARYA.jpeg"},
+    {"nama":"SMK Adiputra Kefamenanu","lat":-9.466585337326123,"lng":124.5138326910282,"alamat":"Jl. Ringroad Naen Kefamenanu, Kelurahan Tubuhue, Kec. Kota Kefamenanu, Kab. Timor Tengah Utara, Prov. Nusa Tenggara Timur","jenis":"SMK","deskripsi":"(70046451) Akreditasi: C, 94 Siswa, Ruang Kelas, Laboratorium, Perpustakaan","foto":"SMKADIPUTRA.jpeg"},
+    {"nama":"SMK Clarent Kefamenanu","lat":-9.467231383034635,"lng":124.48089723549354,"alamat":"Jl. El Tari, Km.3, Benpasi, Kec. Kota Kefamenanu, Kab. Timor Tengah Utara, Prov. Nusa Tenggara Timur","jenis":"SMK","deskripsi":"(NP259283) Akreditasi: B, 39 Siswa, Ruang Kelas, Laboratorium, Perpustakaan","foto":"SMKClarent.jpeg"},
+    {"nama":"SMAK St. Agustinus Kefamenanu","lat":-9.460110670732826,"lng":124.48355707012672,"alamat":"Jl. Rajawali, Km.7, Sasi, Kec. Kota Kefamenanu, Kab. Timor Tengah Utara, Prov. Nusa Tenggara Timur","jenis":"SMAK","deskripsi":"(69733979) Akreditasi: B, 108 Siswa, Ruang Kelas, Laboratorium, Perpustakaan","foto":"SMKSAGUSTINUS.jpeg"},
+    {"nama":"SMKS Katolik Kefamenanu","lat":-9.437712714842027,"lng":124.47878917125622,"alamat":"Jl. Yos Soedarso, Aplasi, Kec. Kota Kefamenanu, Kab. Timor Tengah Utara, Prov. Nusa Tenggara Timur","jenis":"SMKS","deskripsi":"(50301013) Akreditasi: A, 111 Siswa, Ruang Kelas, Laboratorium, Perpustakaan","foto":"SMKSKefa.jpeg"}
+];
+
+
+  const iconSMA = L.icon({
+    iconUrl: 'titik.png',
+    iconSize: [40,40],
+    iconAnchor: [20,40],
+    popupAnchor: [0,-40]
+  });
+  const iconSMK = L.icon({
+    iconUrl: 'titik.png',
+    iconSize: [40,40],
+    iconAnchor: [20,40],
+    popupAnchor: [0,-40]
+  });
+
+  sekolahData.forEach(s => {
+    const icon = s.jenis === 'SMA' ? iconSMA : iconSMK;
+    const popupHtml = `
+      <div style="text-align:center;max-width:250px;">
+        <h4 style="margin:0 0 6px 0;color:#0D47A1;">${s.nama}</h4>
+        <img src="${s.foto}" alt="Foto ${s.nama}" style="width:100%; height:120px; object-fit:cover; border-radius:8px; margin-bottom:6px;" />
+        <p style="margin:0; font-size:0.9rem; color:#444;">${s.deskripsi}</p>
+        <p style="margin-top:6px; font-size:0.85rem; font-style:italic; color:#666;">Alamat: ${s.alamat}</p>
+      </div>`;
+    L.marker([s.lat,s.lng], {icon}).addTo(map)
+      .bindPopup(popupHtml);
+  });
+
+  const schoolGrid = document.getElementById('school-grid');
+  sekolahData.forEach(sk => {
+    const card = document.createElement('div');
+    card.className = 'school-card';
+    card.innerHTML = `
+      <img src="${sk.foto}" alt="Foto sekolah ${sk.nama}" class="school-image" />
+      <div class="school-content">
+        <h3>${sk.nama}</h3>
+        <p>${sk.alamat}</p>
+      </div>`;
+    card.addEventListener('click', () => showModal(sk));
+    schoolGrid.appendChild(card);
+  });
+
+  const modal = document.getElementById('modal');
+  const modalCloseBtn = document.getElementById('modal-close');
+  const modalImg = document.getElementById('modal-img');
+  const modalTitle = document.getElementById('modal-title');
+  const modalDesc = document.getElementById('modal-desc');
+
+  function showModal(school) {
+    modalImg.src = school.foto;
+    modalImg.alt = `Foto lengkap sekolah ${school.nama}`;
+    modalTitle.textContent = school.nama;
+    modalDesc.textContent = school.deskripsi + "\nLokasi: " + school.alamat + " (" + school.jenis + ")";
+    modal.classList.add('active');
+    modalCloseBtn.focus();
+  }
+  modalCloseBtn.addEventListener('click', () => {
+    modal.classList.remove('active');
+  });
+  modal.addEventListener('click', e => {
+    if(e.target === modal) {
+      modal.classList.remove('active');
+    }
+  });
+  document.addEventListener('keydown', e => {
+    if(e.key === "Escape" && modal.classList.contains('active')) {
+      modal.classList.remove('active');
+    }
+  });
+
+  const timData = [
+    {nama:"Agricola Nantia Kolo", role:"nantiakolo@gmail.com", foto:"tia.jpeg"}, 
+    {nama:"Anastasia Evelin Hutubessy", role:"anastasia1732007@gmail.com", foto:"tasy.jpeg"},
+    {nama:"Jesica Viktoria Simamora", role:"jesicasimamora@gmail.com", foto:"jeje.jpeg"},
+    {nama:"Jesica Graciela Makunimau", role:"jesicagracielamakunimau@gmail.com", foto:"grace.jpeg"},
+    {nama:"Euis Clarita Tiara Tunas Totnay", role:"euisclarita@gmail.com", foto:"kt.jpeg"},
+    {nama:"Novianti Rosana Priangan", role:"novypriangan@gmail.com", foto:"kn.jpeg"}
+  ];
+  const teamGrid = document.getElementById('team-grid');
+  timData.forEach(t => {
+    const div = document.createElement('div');
+    div.className = 'team-card';
+    div.innerHTML =`
+      <img src="${t.foto}" alt="Foto tim ${t.nama}" class="team-photo" />
+      <div class="team-name">${t.nama}</div>
+      <div class="team-role">${t.role}</div>`;
+    teamGrid.appendChild(div);
+  });
+
+  const form = document.getElementById('contact-form');
+  const formMsg = document.getElementById('form-message');
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    const nama = form.nama.value.trim();
+    const email = form.email.value.trim();
+    const ulasan = form.ulasan.value.trim();
+    if(!nama || !email || !ulasan) {
+      alert('Mohon lengkapi semua bidang!');
+      return;
+    }
+    form.reset();
+    formMsg.textContent = 'Terima kasih atas ulasan Anda!';
+    setTimeout(() => formMsg.textContent = '', 5000);
+  });
+</script>
+</body>
+</html>
+
